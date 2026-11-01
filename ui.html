@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+      font-size: 12px;
+      color: #1F1F1F;
+      background-color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-sizing: border-box;
+    }
+    h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    p {
+      margin: 0;
+      color: #666666;
+      line-height: 1.4;
+      font-size: 11px;
+    }
+    .option-box {
+      background: #F7F7F8;
+      padding: 10px 12px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button {
+      background-color: #18A0FB;
+      color: #FFFFFF;
+      border: none;
+      padding: 9px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #0D8CE0;
+    }
+    button:disabled {
+      background-color: #E0E0E0;
+      color: #999999;
+      cursor: not-allowed;
+    }
+    #progressArea {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background-color: #EEEEEE;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: #18A0FB;
+      transition: width 0.15s ease, background-color 0.2s ease;
+    }
+    .progress-status {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #666666;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h3>SpecDraw (속성 명세 추출)</h3>
+    <p>선택한 레이어의 컬러, 서체, 크기, 행간, 정렬값을 첨부된 SVG 카드 형태로 생성합니다.</p>
+  </div>
+
+  <div class="option-box">
+    <label>
+      <input type="radio" name="extractMode" value="selected" checked>
+      선택된 노드만 추출
+    </label>
+    <label>
+      <input type="radio" name="extractMode" value="deep">
+      선택 영역 내 텍스트/자식 노드 전체 추출
+    </label>
+  </div>
+
+  <button id="extractBtn">속성 카드 추출하기</button>
+
+  <div id="progressArea">
+    <div class="progress-status">
+      <span id="statusText">추출 준비 중...</span>
+      <span id="percentText">0%</span>
+    </div>
+    <div class="progress-track">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+  </div>
+
+  <script>
+    const extractBtn = document.getElementById('extractBtn');
+    const progressArea = document.getElementById('progressArea');
+    const progressBar = document.getElementById('progressBar');
+    const statusText = document.getElementById('statusText');
+    const percentText = document.getElementById('percentText');
+
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === 'progress-update') {
+        progressArea.style.display = 'flex';
+        extractBtn.disabled = true;
+        const pct = Math.min(100, Math.round(msg.percent));
+        progressBar.style.width = pct + '%';
+        percentText.innerText = pct + '%';
+        statusText.innerText = msg.status;
+      }
+
+      if (msg.type === 'extraction-completed') {
+        progressBar.style.width = '100%';
+        progressBar.style.backgroundColor = '#10B981';
+        percentText.innerText = '100%';
+        statusText.innerText = '추출 완료!';
+
+        setTimeout(() => {
+          alert('🎉 선택한 노드의 속성 명세 카드 추출이 완료되었습니다!');
+          parent.postMessage({ pluginMessage: { type: 'close-plugin' } }, '*');
+        }, 120);
+      }
+    };
+
+    extractBtn.onclick = () => {
+      const mode = document.querySelector('input[name="extractMode"]:checked').value;
+      progressArea.style.display = 'flex';
+      progressBar.style.backgroundColor = '#18A0FB';
+      extractBtn.disabled = true;
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'start-extraction',
+          extractMode: mode
+        }
+      }, '*');
+    };
+  </script>
+</body>
+</html>
